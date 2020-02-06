@@ -1,5 +1,8 @@
 # simple-freeze
 
+Olá pessoal, sou novo no fórum! gostaria de perguntar à vocês se existe alguma maneira de colocar senha no "Gofris", para que o administrador somente possa acesá-lo inserindo a senha. Tem como fazer isso? Obrigado!
+
+
 Outro sistemas - antes de instalar faça backup dos usuários com o script:
 
 #!/bin/bash
