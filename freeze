@@ -1,14 +1,15 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:	  nginx
-# Required-Start:    $local_fs $remote_fs $network $syslog $named
-# Required-Stop:     $local_fs $remote_fs $network $syslog $named
+# Provides:	  freeze
+# Required-Start:    $rsync
+# Required-Stop:     $rsync
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: starts the nginx web server
 # Description:       starts nginx using start-stop-daemon
 ### END INIT INFO
+
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 #DAEMON=/usr/sbin/nginx
@@ -131,6 +132,10 @@ cleaner() {
 	# Se existir o arquivo que inicia junto ao boot, remove
 	[ -e /etc/init.d/freeze ] && rm /etc/init.d/freeze	
 	
+	# Teoricamente quando esse comando for usado, todos os link's abaixo serão removidos
+	# Lembrando que update-rc.d, usa as informações do cabeçalho Default-Start e Default-Stop
+	# update-rc.d freeze remove
+	
 	# Se existirem os link's nos níveis de inicialização, remove-os
 	#[ -e /etc/rc0.d/S01freeze ] && rm /etc/rc0.d/S01freeze
 	#[ -e /etc/rc1.d/S01freeze ] && rm /etc/rc1.d/S01freeze
@@ -183,9 +188,13 @@ create_boot_file() {
 	rm freeze_temp
 	chmod +x /etc/init.d/freeze
 	#chmod 755 /etc/init.d/freeze
+	
 
 	# Adicionar link's nos vários niveis de inicialização do sistema
 	#OBS.: Testar a necessidade de colocar em varios níveis
+	# Teoricamente quando esse comando for usado, todos os link's abaixo serão removidos
+	# Lembrando que update-rc.d, usa as informações do cabeçalho Default-Start e Default-Stop
+	# update-rc.d freeze defaults
 	# ln -s /etc/init.d/freeze /etc/rc0.d/S01freeze
 	# ln -s /etc/init.d/freeze /etc/rc1.d/S01freeze
 	ln -s /etc/init.d/freeze /etc/rc2.d/S01freeze
