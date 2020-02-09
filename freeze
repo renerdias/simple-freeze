@@ -15,10 +15,17 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME=freeze
 DESC=freeze
 
+
+# //FIXME PENDENCIAS
+# Configurar cabeçalho
+
+
+
+
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS ESTÈTICAS
 
-# Cores regulares
+# Para texto
 TextRed='\033[0;31m'       # Red
 TextGreen='\033[0;32m'     # Green
 TextYellow='\033[0;33m'    # Yellow
@@ -27,6 +34,7 @@ TextCyan='\033[0;36m'      # Cyan
 TextBlue='\033[0;44m'      # Blue
 TextLightBlue='\033[0;94m' # LightBlue
 
+# Para fundo(background)
 BgRed='\033[0;31m'        # Red
 BgGreen='\033[0;42m'      # Green
 BgYellow='\033[0;43m'     # Yellow
@@ -38,28 +46,20 @@ BgLightBlue='\033[0;104m' # LightBlue
 # Redefinir cores
 Color_Off='\033[0m' # Redefinir
 
-# EX.: echo "$TextCyan \n Adicionando repositórios... $Color_Off"
+# EX.: echo "$TextCyan Adicionando repositórios... $Color_Off"
 #------------------------------------------------------------------------------ ####
 
-#----- Cheching root -----
+
+#### ------------------------------------------------------------------------------#
+# Verifica se o script está sendo executado como root
 if [ "$(id -u)" != "0" ]; then
 	echo
 	echo "$BgRed Você deve executar este script como root! $Color_Off"
 	exit
 fi
+#------------------------------------------------------------------------------ ####
 
-# //FIXME Alterar pasta freeze para /home/.freeze, por questão de espaço, mas excluir ela na sincronização
-
-#----- Mendeklarasikan variabel -----
-is_options=false
-is_success=true
-ofris_n=6
-freeze_temp_co=1
-is_cho=false
-
-FILE_EXEC=/etc/init.d/freeze
-#------------------------------------
-
+#### ------------------------------------------------------------------------------#
 credit() {
 	echo "${TextYellow}"
 	echo "# =============================================================================="
@@ -89,6 +89,7 @@ credit() {
 	echo "$Color_Off"
 	echo ""
 }
+#------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
 security() {
@@ -114,6 +115,44 @@ security() {
 	fi
 }
 #------------------------------------------------------------------------------ ####
+
+
+
+
+
+
+
+
+
+
+
+# //FIXME Procurar um outro local de destino para a pasta .freeze, não faz muito sentido ela ficar em /etc
+# //FIXME Alterar pasta freeze para /home/.freeze, por questão de espaço, mas excluir ela na sincronização
+
+#----- Mendeklarasikan variabel -----
+is_options=false
+is_success=true
+ofris_n=6
+freeze_temp_co=1
+is_cho=false
+
+
+
+#Best practices & Compression
+#A command to remember, that can be useful for you in all situations:
+
+#rsync -avhP source/ destination
+#Let's see new arguments :
+
+#-h : for “humanize”. Transforms bytes to Kilo/Mega/Gigabytes to make it more easy to read.
+#-P : for “Progress”. Displays the process of the transfer in real time (with -v, it will display the process file by file).
+
+FILE_EXEC=/etc/init.d/freeze
+#------------------------------------
+
+
+
+
 
 #### ------------------------------------------------------------------------------#
 start_freeze() {
@@ -285,17 +324,24 @@ start_freeze_user() {
 	# Cria o diretório de congelamento
 	mkdir /etc/.freeze/
 	# Cria o diretório de congelamento do usuário específico
-	mkdir /etc/.freeze/$system_user
-	# Testar comando e verificar necessidade de criar pasta antes
-	rsync -a --delete /home/$system_user /etc/.freeze/
+	# Não há necessidade, já que no comando rsync é criado o diretorio de origem no destino
+	# mkdir /etc/.freeze/$system_user
+	# VERIFICAR OPÇÕES DO RSYNC, SERÁ QUE É NECESSÁRIO ESSE DELETE, JA QUE A PASTA DE DESTINO ESTARÁ VAZIA
+	#rsync -a --delete /home/$system_user /etc/.freeze/
+	rsync -avhP /home/$system_user /etc/.freeze/
 	# Verifica se o rsync foi executado com sucesso
 	if [ $? -eq 0 ]; then
+		echo
 		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
 		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		echo
 		exit
 	fi
 	
 	echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "Limpando..."
+	#rm -r /etc/.freeze
+	# criar file_exec novamente
 	echo
 }
 #------------------------------------------------------------------------------ ####
@@ -501,8 +547,87 @@ create_freeze_cleanchange() {
 }
 #------------------------------------------------------------------------------ ####
 
+
+#### ------------------------------------------------------------------------------#
+# Cria o arquivo que realizará a limpeza das alterações do(s) usuários, na inicialização do sistema
+create_boot_file() {
+	if [ -e /etc/init.d/freeze ]; then
+		rm /etc/init.d/freeze
+		#rm /etc/rc0.d/S01freeze
+		# rm /etc/rc1.d/S01freeze
+		rm /etc/rc2.d/S01freeze
+		rm /etc/rc3.d/S01freeze
+		rm /etc/rc4.d/S01freeze
+		rm /etc/rc5.d/S01freeze
+		# rm /etc/rc6.d/S01freeze
+	fi
+	
+	# //TODO MELHORAR ESSE CABEÇALHO
+	echo "#!/bin/sh" >freeze_temp
+	echo "# Start/stop the cron daemon." >>freeze_temp
+	echo "#" >>freeze_temp
+	echo "### BEGIN INIT INFO" >>freeze_temp
+	echo "# Provides:          freeze" >>freeze_temp
+	echo "# Required-Start:    remote_fs syslog time" >>freeze_temp
+	echo "# Required-Stop:     remote_fs syslog time" >>freeze_temp
+	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Default-Start:     2 3 4 5" >>freeze_temp
+	echo "# Default-Stop:" >>freeze_temp
+	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
+	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
+	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
+	echo "#                    number of features to the basic UNIX cron, including better" >>freeze_temp
+	echo "#                    security and more powerful configuration options." >>freeze_temp
+	echo "### END INIT INFO" >>freeze_temp
+	echo "" >>freeze_temp
+	echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >>freeze_temp
+	echo "DESC="cron daemon"" >>freeze_temp
+	echo "NAME=freeze" >>freeze_temp
+	echo "#DAEMON=/usr/sbin/cron" >>freeze_temp
+	echo "#PIDFILE=/var/run/crond.pid" >>freeze_temp
+	echo "SCRIPTNAME=/etc/init.d/NAME" >>freeze_temp
+	echo "" >>freeze_temp
+	echo "$1" >>freeze_temp
+	echo "" >>freeze_temp
+	echo "exit 0" >>freeze_temp
+
+	# VERIFICAR A NECESSIDADE CRIAR UM ARQUIVO TEMPORARIO, AO INVÉS DE CRIAR O ARQUIVO DIRETO
+	cp freeze_temp /etc/init.d/freeze
+	rm freeze_temp
+	chmod +x /etc/init.d/freeze
+	chmod 775 /etc/init.d/freeze
+
+	# Adicionar link's nos vários niveis de inicialização do sistema
+	#OBS.: Testar a necessidade de colocar em varios níveis
+	# ln -s /etc/init.d/freeze /etc/rc0.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc1.d/S01freeze
+	ln -s /etc/init.d/freeze /etc/rc2.d/S01freeze
+	ln -s /etc/init.d/freeze /etc/rc3.d/S01freeze
+	ln -s /etc/init.d/freeze /etc/rc4.d/S01freeze
+	ln -s /etc/init.d/freeze /etc/rc5.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc6.d/S01freeze
+}
+#------------------------------------------------------------------------------ ####
+
+
 #### ------------------------------------------------------------------------------#
 calc() {
+#cmp -s file1 file2 
+#0 = identicos
+#1 = diferentes
+#2 = não conseguie comparar os arquivos
+
+#echo -e "Digite o nome do arquivo e a palavra: "
+#read file word
+
+# comando grep procura pela palavra $word no arquivo $file
+# > /dev/null redireciona a saída do comando grep
+#if grep $word $file > /dev/null
+#then
+#echo "A palavra $word existe no arquivo $file."
+#i
+
 	grep -v "rsync -a --delete /etc/" $FILE_EXEC >freeze_temp
 	set $(wc -l freeze_temp)
 	freeze_original=$1
@@ -515,7 +640,7 @@ calc() {
 
 credit
 security
-create_freeze_cleanchange
+# create_freeze_cleanchange
 calc
 
 case "$1" in
