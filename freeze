@@ -15,12 +15,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME=freeze
 DESC=freeze
 
-
 # //FIXME PENDENCIAS
 # Configurar cabeçalho
-
-
-
 
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Estética
@@ -35,7 +31,7 @@ TextBlue='\033[0;44m'      # Blue
 TextLightBlue='\033[0;94m' # LightBlue
 
 # Para fundo(background)
-BgRed='\033[0;31m'        # Red
+BgRed='\033[0;41m'        # Red
 BgGreen='\033[0;42m'      # Green
 BgYellow='\033[0;43m'     # Yellow
 BgPurple='\033[0;45m'     # Purple
@@ -49,6 +45,14 @@ Color_Off='\033[0m' # Redefinir
 # EX.: echo "$TextCyan Adicionando repositórios... $Color_Off"
 #------------------------------------------------------------------------------ ####
 
+#### ------------------------------------------------------------------------------#
+# VARIÁVEIS GLOBAIS - Inicialização
+
+FOLDER_FREEZE=/etc/.freeze
+BOOT_FILE_EXEC=/etc/init.d/freeze
+# sUBSITUIR PELO ANTERIOR
+FILE_EXEC=/etc/init.d/freeze
+#------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
 # Verifica se o script está sendo executado como root
@@ -61,17 +65,8 @@ fi
 
 
 #### ------------------------------------------------------------------------------#
-# VARIÁVEIS GLOBAIS - Inicialização
-FOLDER_FREEZE=/etc/.freeze
-BOOT_FILE_EXEC=/etc/init.d/freeze
-# sUBSITUIR PELO ANTERIOR
-FILE_EXEC=/etc/init.d/freeze
-#------------------------------------------------------------------------------ ####
-
-
-#### ------------------------------------------------------------------------------#
 credit() {
-	echo "${TextYellow}"
+	echo "$TextYellow"
 	echo "# =============================================================================="
 	echo "#                               SIMPLE FREEZE"
 	echo "# =============================================================================="
@@ -91,7 +86,7 @@ credit() {
 	echo "# Modified date: 06.11.2019"
 	echo "# =============================================================================="
 	# echo ""
-	echo "${TextYellow}"
+	echo "$TextYellow"
 	echo "# =============================================================================="
 	echo "# Adaptado por:   Rener Dias <renerdias@msn.com>"
 	echo "# Data de modificação: 10.02.2020"
@@ -107,7 +102,7 @@ security() {
 	if [ -e .freeze-password ]; then
 		# Pega o conteudo do arquivo
 		freeze_password=$(<.freeze-password)
-		echo "Foi definida anteriormente uma senha para utilização do 'freeze'."
+		echo "$BgYellow ATENÇÃO!!! $Color_Off Foi definida anteriormente uma senha para utilização do 'freeze'."
 		echo
 		echo -n "Digite a senha: "
 		read -s password
@@ -187,7 +182,7 @@ create_boot_file() {
 	cp freeze_temp /etc/init.d/freeze
 	rm freeze_temp
 	chmod +x /etc/init.d/freeze
-	chmod 775 /etc/init.d/freeze
+	#chmod 755 /etc/init.d/freeze
 
 	# Adicionar link's nos vários niveis de inicialização do sistema
 	#OBS.: Testar a necessidade de colocar em varios níveis
@@ -261,11 +256,11 @@ stop_freeze() {
 	
 	cleaner
 	if [ "$?" -eq "0" ]; then
-		echo "$BgYellow  STATUS:  $Color_Off O sistema foi descongelado com sucesso...!"
-        echo
+		echo "$BgGreen  STATUS:  $Color_Off O sistema foi descongelado com sucesso!"
+    echo
 	else
 		echo "$BgRed  STATUS:  $Color_Off Não foi possível descongelar o sistema!"
-        echo
+    echo
 		exit 1
 	fi
 }
@@ -297,7 +292,7 @@ start_freeze_user() {
 	check_status
 	if [ "$?" -eq "0" ]; then
 		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
-        echo
+    echo
 		exit 0
 	fi	
 	
@@ -311,7 +306,7 @@ start_freeze_user() {
 	create_boot_file "rsync -a --delete /etc/.freeze/$system_user/ /home/$system_user/"	
 	if [ "$?" -ne "0" ]; then
 		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
-        echo
+    echo
 		exit 1
 	fi
 		
@@ -424,6 +419,8 @@ start_freeze_all() {
 
 
 
+
+
 #### ------------------------------------------------------------------------------#
 set_password() {
 	#----- Password protection by Kelompok 4 OSSDev -----
@@ -457,14 +454,16 @@ set_password() {
 }
 #------------------------------------------------------------------------------ ####
 
+#### ------------------------------------------------------------------------------#
+# Inicia as funções básicas
+init() {
+	credit
+	security
+}
+#------------------------------------------------------------------------------ ####
 
-
-
-
-
-credit
-security
-
+# Inicia as funções básicas
+init
 
 case "$1" in
 start)
