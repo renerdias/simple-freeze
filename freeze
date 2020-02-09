@@ -210,11 +210,11 @@ create_boot_file() {
 status_freeze() {
 	check_status
 	if [ "$?" -eq "0" ]; then
-	then
-		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} ESTÁ $Color_Off bloqueado!"
+		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} ESTÁ $Color_Off congelado!"
 	else
-		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} NãO ESTÁ $Color_Off bloqueado!"
+		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} NãO ESTÁ $Color_Off congelado!"
 	fi
+    echo
 	exit 0	
 }
 #------------------------------------------------------------------------------ ####
@@ -225,7 +225,7 @@ check_status() {
 	if [ ! -d /etc/.freeze ]; then
 		return 1
 	fi
-	
+
 	# Verificar se o arquivo freeze existe
 	if [ ! -e /etc/ini.d/freeze ]; then
 		return 1
@@ -249,10 +249,9 @@ stop_freeze() {
 
 	# Verifica o status do sistema
 	check_status
-	if [ "$?" -eq "0" ]; then
-	then
-		#echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} ESTÁ $Color_Off bloqueado!"
-		echo "`$BgLightBlue` INFO `$Color_Off` Não é possivel realizar esta operação, o sistema NÃO está congelado."
+	if [ "$?" -ne "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema $TextLightBlue NÃO $Color_Off está congelado."
+        echo
 		exit 0
 	fi	
 	
@@ -262,13 +261,13 @@ stop_freeze() {
 	
 	cleaner
 	if [ "$?" -eq "0" ]; then
-	then
 		echo "$BgYellow  STATUS:  $Color_Off O sistema foi descongelado com sucesso...!"
+        echo
 	else
 		echo "$BgRed  STATUS:  $Color_Off Não foi possível descongelar o sistema!"
+        echo
 		exit 1
 	fi
-	echo
 }
 #------------------------------------------------------------------------------ ####
 
@@ -297,22 +296,22 @@ start_freeze_user() {
 	# Verifica o status do sistema
 	check_status
 	if [ "$?" -eq "0" ]; then
-	then
-		echo "`$BgLightBlue` INFO `$Color_Off` Não é possivel realizar esta operação, o sistema já está congelado."
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
+        echo
 		exit 0
 	fi	
 	
 	# Verificar se a pasta do usuario informado existe
 	if [ ! -d "/home/$system_user" ]; then		
-		echo "`$BgRed` ERROR `$Color_Off` Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
+		echo "$BgRed ERROR $Color_Off Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
 		echo
 		exit 1
 	fi
 			
 	create_boot_file "rsync -a --delete /etc/.freeze/$system_user/ /home/$system_user/"	
 	if [ "$?" -ne "0" ]; then
-	then
-		echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+        echo
 		exit 1
 	fi
 		
@@ -327,11 +326,10 @@ start_freeze_user() {
 		exit 0
 	fi
 	
-	echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
 	echo "Desfazendo modificações..."
 	cleaner
 	if [ "$?" -eq "0" ]; then
-	then
 		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
 	else
 		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
@@ -389,15 +387,13 @@ start_freeze_all() {
 	# Verifica o status do sistema
 	check_status
 	if [ "$?" -eq "0" ]; then
-	then
-		echo "`$BgLightBlue` INFO `$Color_Off` Não é possivel realizar esta operação, o sistema já está congelado."
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
 		exit 0
 	fi	
 				
 	create_boot_file "rsync -a --delete /etc/.freeze/ /home/"	
 	if [ "$?" -ne "0" ]; then
-	then
-		echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
 		exit 1
 	fi
 		
@@ -412,11 +408,10 @@ start_freeze_all() {
 		exit 0
 	fi
 	
-	echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
 	echo "Desfazendo modificações..."
 	cleaner
 	if [ "$?" -eq "0" ]; then
-	then
 		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
 	else
 		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
