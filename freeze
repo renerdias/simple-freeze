@@ -60,6 +60,7 @@ FILE_EXEC=/etc/init.d/freeze
 if [ "$(id -u)" != "0" ]; then
 	echo
 	echo "$BgRed Você deve executar este script como root! $Color_Off"
+	echo
 	exit 1
 fi
 #------------------------------------------------------------------------------ ####
