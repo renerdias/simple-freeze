@@ -105,7 +105,7 @@ security() {
 		if [ $password != $freeze_password ]; then
 			echo
 			echo
-			echo "Senha inválida!"
+			echo "✘ Senha inválida!"
 			echo
 			exit
 		fi
@@ -244,66 +244,59 @@ start_freeze_this() {
 #------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
+# Congelar o sistema para um usuário específico
 start_freeze_user() {
-	#verificar de a pasta do usuario informado existe
-	# 2. Congelar o sistema para um usuário específico
-	freeze_temp_co=2
-	if [ $is_cho = true ]; then
-		is_cho_suc=false
-		while [ $is_cho_suc = false ]; do
-			is_cho_suc=false
-			echo -n "Please type the username you want to freeze: "
-			read ofris_cho
+	
+	# Verifica o status do sistema
+	if [ $freeze_restante = 1 ]; then
+		echo
+		echo "`$BgLightBlue` INFO `$Color_Off` Não é possivel realizar esta operação, o sistema já está congelado."
+		echo
+		exit
+	fi
+	
+	# Recebe o nome do usuario informado
+	usuario=$1
 
-			if [ -d "/home/$ofris_cho" ]; then
-				echo
-				is_cho_suc=true
-				system_user=$ofris_cho
-			else
-				echo "Sorry, the username is wrong. Please try again..."
-				echo
-			fi
-		done
+	# Verificar se a pasta do usuario informado existe
+	if [ -d "/home/$usuario" ]; then
+		system_user=$usuario
+	else
+		echo "`$BgRed` ERROR `$Color_Off` Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
+		echo
+		exit
 	fi
 
-	if [ $freeze_restante = 1 ]; then
-		echo "Error : O sistema foi congelado."
-		echo
-		is_success=false
-	else
+	# PRECISA ATENÇÃO E DESCRIÇÃO DOS EVENTOS
 		grep -v "exit 0" $FILE_EXEC >freeze_temp
 		echo "rsync -a --delete /etc/.freeze/$system_user/ /home/$system_user/" >>freeze_temp
 		echo "exit 0" >>freeze_temp
 		rm $FILE_EXEC
 		cp freeze_temp $FILE_EXEC
-		rm freeze_temp
-	fi
-
-	if [ $is_success = true ]; then
-		if [ -d /etc/.freeze ]; then
-			rm -r /etc/.freeze
-		fi
-
-		if [ -d /etc/.freeze ]; then
-			rsync -a --delete /home/$system_user /etc/.freeze/
-		else
-			mkdir /etc/.freeze/
-
-			if [ $system_user != "" ]; then
-				mkdir /etc/.freeze/$system_user
-			fi
-
-			rsync -a --delete /home/$system_user /etc/.freeze/
-		fi
-
 		chmod +x $FILE_EXEC
 		chmod 775 $FILE_EXEC
+		rm freeze_temp
+		
+	# Verifica se existe a pasta de congelamento/backup e a remove
+	if [ -d /etc/.freeze ]; then		
+		rm -r /etc/.freeze
 	fi
-
-	if [ $is_success = true ]; then
-		echo "O sistema foi congelado com sucesso. Reinicie o computador para concluir..."
-		echo
+		
+	# Cria o diretório de congelamento
+	mkdir /etc/.freeze/
+	# Cria o diretório de congelamento do usuário específico
+	mkdir /etc/.freeze/$system_user
+	# Testar comando e verificar necessidade de criar pasta antes
+	rsync -a --delete /home/$system_user /etc/.freeze/
+	# Verifica se o rsync foi executado com sucesso
+	if [ $? -eq 0 ]; then
+		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
+		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		exit
 	fi
+	
+	echo "`$BgRed` ERROR `$Color_Off` Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo
 }
 #------------------------------------------------------------------------------ ####
 
@@ -536,7 +529,7 @@ start)
 	case "$2" in
 	all) start_freeze_all ;;
 	this) start_freeze_this ;;
-	*) start_freeze_user ;;
+	*) start_freeze_user "$2" ;;
 	esac
 	;;
 stop)
