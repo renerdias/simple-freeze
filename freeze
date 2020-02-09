@@ -97,6 +97,8 @@ security() {
 	if [ -e .freeze-password ]; then
 		# Pega o conteudo do arquivo
 		freeze_password=$(<.freeze-password)
+		echo "Foi definida anteriormente uma senha para utilização do 'freeze'."
+		echo
 		echo -n "Digite a senha: "
 		read -s password
 		# Pega a senha digitda, faz o hash, e recorta de 1-32
