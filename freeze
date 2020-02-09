@@ -180,7 +180,7 @@ create_boot_file() {
 	echo "" >>freeze_temp
 	#echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >>freeze_temp
 	echo "NAME=freeze" >>freeze_temp
-	echo "DESC=Executa a limpeza das alterações feitas pelo(s) usuário(s) durante o congelamento do sistema" >>freeze_temp
+	echo 'DESC="Executa a limpeza das alterações feitas pelo(s) usuário(s) durante o congelamento do sistema"' >>freeze_temp
 	echo "" >>freeze_temp
 	echo "$1" >>freeze_temp
 	echo "" >>freeze_temp
@@ -235,13 +235,13 @@ check_status() {
 	fi
 
 	# Verificar se o arquivo freeze existe
-	if [ ! -e /etc/ini.d/freeze ]; then
+	if [ ! -e /etc/init.d/freeze ]; then
 		return 1
 	fi
 
 	# Verifica se no arquivo freeze existe o comando rsync
 	local word='rsync -a --delete /etc/'
-	if grep $word /etc/ini.d/freeze > /dev/null
+	if grep "$word" /etc/init.d/freeze > /dev/null
 	then
 		return 0
 	else
@@ -297,7 +297,20 @@ start_freeze_this() {
 #### ------------------------------------------------------------------------------#
 # Congelar o sistema para um usuário específico
 start_freeze_user() {
-	
+#### ERROR AQUI
+	# verificar quantidade de parametros
+	if [ $# -lt 1 ]; then
+   echo "Faltou utilizar pelo menos um argumento!"
+   exit 1
+fi
+
+# eSSA VERIFICAÇÃO APARENTEMENTE FUNCIONA
+if [ -z $1 ];then
+	echo "$BgRed ERROR $Color_Off Este comando precisa de um parâmetro."
+	#IMPRIMIR O HELP AQUI
+	echo
+fi
+
 	# Recebe o nome do usuario informado
 	local system_user=$1
 	
@@ -310,7 +323,7 @@ start_freeze_user() {
 	fi	
 	
 	# Verificar se a pasta do usuario informado existe
-	if [ ! -d "/home/$system_user" ]; then		
+	if [ ! -d /home/$system_user ]; then		
 		echo "$BgRed ERROR $Color_Off Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
 		echo
 		exit 1
@@ -489,7 +502,7 @@ start)
 	case "$2" in
 	all) start_freeze_all ;;
 	this) start_freeze_this ;;
-	*) start_freeze_user "$2" ;;
+	*) start_freeze_user $2 ;;
 	esac
 	;;
 stop)
