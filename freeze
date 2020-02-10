@@ -18,6 +18,22 @@ DESC=freeze
 
 # //FIXME PENDENCIAS
 # Configurar cabeçalho
+# DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
+
+# apt-cache search nautilus
+# Opção: #https://www.edivaldobrito.com.br/como-adicionar-opcao-abrir-terminal-aqui-menu-nautilus-ubuntu-14-04/
+# Abrir pasta como administrador e abrir terminal
+# sudo apt-get install nautilus-admin
+# Abrir como root
+# sudo nautilus
+
+# Alterar metadados arquivos de audio
+#easytag-nautilus - Nautilus extension for opening in EasyTAG
+
+# Atalhos
+#exo-open --launch FileManager => super + e
+#xfce4-screenshooter -f = Print (print screen)
+
 
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Estética
@@ -297,19 +313,21 @@ start_freeze_this() {
 #### ------------------------------------------------------------------------------#
 # Congelar o sistema para um usuário específico
 start_freeze_user() {
-#### ERROR AQUI
-	# verificar quantidade de parametros
+	# Verificar quantidade de parametros
 	if [ $# -lt 1 ]; then
-   echo "Faltou utilizar pelo menos um argumento!"
-   exit 1
-fi
+   		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
 
-# eSSA VERIFICAÇÃO APARENTEMENTE FUNCIONA
-if [ -z $1 ];then
-	echo "$BgRed ERROR $Color_Off Este comando precisa de um parâmetro."
-	#IMPRIMIR O HELP AQUI
-	echo
-fi
+	# Verifica se a variável é nula
+	if [ -z $1 ]; then
+		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
 
 	# Recebe o nome do usuario informado
 	local system_user=$1
@@ -337,7 +355,8 @@ fi
 	fi
 		
 	# Realiza um cópia dos arquivos/configurações do usuário
-	rsync -avhP /home/$system_user /etc/.freeze/
+	#rsync -avhP /home/$system_user /etc/.freeze/
+	rsync -a /home/$system_user /etc/.freeze/
 	# Verifica se o rsync foi executado com sucesso
 	if [ $? -eq 0 ]; then
 		echo
@@ -419,7 +438,8 @@ start_freeze_all() {
 	fi
 		
 	# Realiza um cópia dos arquivos/configurações dos usuários
-	rsync -avhP /home/ /etc/.freeze/
+	#rsync -avhP /home/ /etc/.freeze/
+	rsync -a /home/ /etc/.freeze/
 	# Verifica se o rsync foi executado com sucesso
 	if [ $? -eq 0 ]; then
 		echo
@@ -442,7 +462,19 @@ start_freeze_all() {
 }
 #------------------------------------------------------------------------------ ####
 
-
+help() {
+	echo "Usage: $TextGreen $NAME $Color_Off command [options]"
+	echo ""
+	echo "Commands:"
+	echo "  $TextGreen start $Color_Off:"
+	echo "    all      - Todos os usuários do sistema"
+	echo "    this     - Usuário atual"
+	echo "    *        - Nome do usuário específico"
+	echo ""
+	echo "  $TextGreen stop $Color_Off       - Interronpe o congelamento"
+	echo "  $TextGreen status $Color_Off     - Verifica se o sistema está congelado"
+	echo "  $TextGreen password $Color_Off   - Define um senha para o congelamento"
+}
 
 
 
@@ -495,7 +527,7 @@ case "$1" in
 start)
 	case "$2" in
 	all) start_freeze_all ;;
-	this) start_freeze_this ;;
+	this) start_freeze_this "this" ;;
 	*) start_freeze_user $2 ;;
 	esac
 	;;
@@ -513,18 +545,9 @@ status)
 password)
 	set_password "$2"
 	;;
-*)
-	echo "Usage: $NAME command [options]"
-	echo ""
-	echo "Commands:"
-	echo "  start:"
-	echo "    all      - Todos os usuários do sistema"
-	echo "    this     - Usuário atual"
-	echo "    *        - Nome do usuário específico"
-	echo ""
-	echo "  stop       - Interronpe o congelamento"
-	echo "  status     - Verifica se o sistema está congelado"
-	echo "  password   - Define um senha para o congelamento"
+*) 
+help
+
 	exit 3
 	;;
 esac
