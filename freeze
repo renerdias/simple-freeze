@@ -527,7 +527,7 @@ case "$1" in
 start)
 	case "$2" in
 	all) start_freeze_all ;;
-	this) start_freeze_this "this" ;;
+	this) start_freeze_this;;
 	*) start_freeze_user $2 ;;
 	esac
 	;;
