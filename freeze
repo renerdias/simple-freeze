@@ -493,12 +493,6 @@ init
 
 case "$1" in
 start)
-	echo
-	echo "===== Freeze the System ====="
-	echo
-	echo "Please wait..."
-	echo
-
 	case "$2" in
 	all) start_freeze_all ;;
 	this) start_freeze_this ;;
