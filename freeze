@@ -1,24 +1,8 @@
 #!/bin/sh
 
-### BEGIN INIT INFO
-# Provides:	  freeze
-# Required-Start:    $rsync
-# Required-Stop:     $rsync
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: starts the nginx web server
-# Description:       starts nginx using start-stop-daemon
-### END INIT INFO
-
-
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-#DAEMON=/usr/sbin/nginx
 NAME=freeze
-DESC=freeze
+DESC="Congela o sistema contra modificações, para um ou mais usuários"
 
-# //FIXME PENDENCIAS
-# Configurar cabeçalho
-# DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
 
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Estética
@@ -46,6 +30,16 @@ Color_Off='\033[0m' # Redefinir
 
 # EX.: echo "$TextCyan Adicionando repositórios... $Color_Off"
 #------------------------------------------------------------------------------ ####
+
+
+
+
+
+
+
+# //FIXME PENDENCIAS
+# DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
+
 
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Inicialização
@@ -507,6 +501,41 @@ help() {
 	echo "  $TextGreen status $Color_Off     - Verifica se o sistema está congelado"
 	echo "  $TextGreen password $Color_Off   - Define um senha para o congelamento"
 }
+
+# function usage
+# {
+#     echo "usage: search [arguments] [options]"
+#     echo "arguments:"
+#     echo "         for text"
+#     echo "         in directory"
+#     echo "options:"
+#     echo "         -c | --case-sensitive"
+#     echo "         -s | --show-filenames-only"
+# }
+
+#     case $1 in
+#         for | -f | --for )
+#             shift
+#             text=$1
+#             ;;
+#         in | --in | -i )
+#             shift
+#             directory=$1
+#             ;;
+#         -h | --help )
+#             usage
+#             exit
+#             ;;
+#         -c | --case-sensitive )
+#             case=
+#             ;;
+#         -s | --show-filenames-only )
+#             verbose=l
+#             ;;
+#         * )
+#             usage
+#             exit 1
+#     esac
 
 
 
