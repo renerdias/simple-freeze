@@ -298,10 +298,14 @@ stop_freeze() {
 #### ------------------------------------------------------------------------------#
 # Congelar o sistema para o usuario ativo/logado apenas
 start_freeze_this() {
-	# Há 3 formas de se pegar o nome do usuário logado
+	# Há 3 formas de se pegar o nome do usuário logado (aparentemente essas 3 opções, pegam o usuário que está executando este script)
 	#		1) usuario=$(whoami)
 	#		2) usuario="$USER"
 	#		3) usuario=id -un
+	
+	# Aparentemente, este comando pega o nome do usuario logado/ativo atualmente, como esperado
+	who
+	who | awk '{print $1}'
 	
 	local system_user=$(whoami)
 	
