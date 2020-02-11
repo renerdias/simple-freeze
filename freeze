@@ -171,7 +171,7 @@ create_boot_file() {
 	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
 	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
 	echo "# Default-Start:     2 3 4 5" >>freeze_temp
-	echo "# Default-Stop:	   	 0 1 6" >>freeze_temp
+	echo "# Default-Stop:	   0 1 6" >>freeze_temp
 	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
 	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
 	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
