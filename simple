@@ -1,9 +1,18 @@
 #!/bin/sh
 
 #### ------------------------------------------------------------------------------#
-# 1) INFORMAÇÃO SOBRE SCRIPT
+# 1) IDENTIFICAÇÃO/INFORMAÇÃO
+
+# Script
 NAME=freeze
 DESC="Congela o sistema contra modificações, para um ou mais usuários"
+VERSION=0.0.1
+DATE="11-02-2020"
+
+#Author
+AUTHOR="Rener Dias"
+EMAIL="<renerdias@msn.com>"
+
 #------------------------------------------------------------------------------ ####
 
 
@@ -11,6 +20,30 @@ DESC="Congela o sistema contra modificações, para um ou mais usuários"
 
 #### ------------------------------------------------------------------------------#
 # 2) VARIÁVEIS DE FORMATAÇÃO
+
+# Para texto
+TextRed='\033[0;31m'       # Red
+TextGreen='\033[0;32m'     # Green
+TextYellow='\033[0;33m'    # Yellow
+TextPurple='\033[0;35m'    # Purple
+TextCyan='\033[0;36m'      # Cyan
+TextBlue='\033[0;44m'      # Blue
+TextLightBlue='\033[0;94m' # LightBlue
+
+# Para fundo(background)
+BgRed='\033[0;41m'        # Red
+BgGreen='\033[0;42m'      # Green
+BgYellow='\033[0;43m'     # Yellow
+BgPurple='\033[0;45m'     # Purple
+BgCyan='\033[0;46m'       # Cyan
+BgBlue='\033[0;44m'       # Blue
+BgLightBlue='\033[0;104m' # LightBlue
+
+# Redefinir cores
+Color_Off='\033[0m' # Redefinir
+
+# Exemplo de uso: echo "$TextCyan Adicionando repositórios... $Color_Off"
+
 #------------------------------------------------------------------------------ ####
 
 
@@ -18,6 +51,17 @@ DESC="Congela o sistema contra modificações, para um ou mais usuários"
 
 #### ------------------------------------------------------------------------------#
 # 3) VARIÁVEIS DE EXECUÇÃO
+
+# Arquivo onde será salvo a senha de acesso ao script, caso seja informada
+PASSWORD_FILE=.freeze-password
+
+# Diretório onde será salvo o backup dos arquivos do(s) usuário(s)
+DIR_FREEZE=/etc/.freeze
+
+# Arquivo que será executado na inicialização do sistema,
+# para remoção das alterações feitas pelo usuário que teve sua sessão congelada
+BOOT_FILE_EXEC=/etc/init.d/freeze
+
 #------------------------------------------------------------------------------ ####
 
 
@@ -25,6 +69,15 @@ DESC="Congela o sistema contra modificações, para um ou mais usuários"
 
 #### ------------------------------------------------------------------------------#
 # 4) VERIFICAÇÃO DE PRIVILÉGIOS DE EXECUÇÃO
+
+# Verifica se o script está sendo executado como root
+if [ "$(id -u)" != "0" ]; then
+	echo
+	echo "$TextBlue Você deve executar este script como root! $Color_Off"
+	echo
+	exit 1
+fi
+
 #------------------------------------------------------------------------------ ####
 
 
@@ -32,6 +85,113 @@ DESC="Congela o sistema contra modificações, para um ou mais usuários"
 
 #### ------------------------------------------------------------------------------#
 # 5) FUNÇOES SECUNDÁRIAS
+
+#===| 
+security() {
+	# Verifica se foi criado/existe um arquivo de senha
+	if [ -e $PASSWORD_FILE ]; then
+		# Pega o conteudo do arquivo
+		freeze_password=$(<$PASSWORD_FILE)
+		echo "$BgYellow ATENÇÃO!!! $Color_Off Foi definida anteriormente uma senha para utilização do 'freeze'."
+		echo
+		echo -n "Digite a senha: "
+		read -s password
+		# Pega a senha digitda, faz o hash, e recorta de 1-32
+		password=$(echo -n "$password" | md5sum | cut -c 1-32)
+
+		# Confere a senha digitada, com a senha previamente definida
+		if [ $password != $freeze_password ]; then
+			echo
+			echo
+			echo "✘ Senha inválida!"
+			echo
+			exit 1
+		fi
+		echo
+		echo
+	fi
+}
+
+#===|
+cleaner() {
+	# Se existir a pasta .freeze, remove
+	[ -d $DIR_FREEZE ] && rm -r $DIR_FREEZE
+	
+	# Se existir o arquivo que inicia junto ao boot, remove
+	if [ -e $BOOT_FILE_EXEC ]; then
+    # Remove todos os link's conforme informado no cabeçalho (Default-Start e Default-Stop)
+		update-rc.d freeze remove
+		rm $BOOT_FILE_EXEC
+	fi
+
+	return 0
+}
+
+#===|
+check_status() {
+	# Verificar se a pasta .freeze existe
+	if [ ! -d $DIR_FREEZE ]; then
+		return 1
+	fi
+
+	# Verificar se o arquivo freeze existe
+	if [ ! -e $BOOT_FILE_EXEC ]; then
+		return 1
+	fi
+
+	# Verifica se no arquivo freeze existe o comando rsync
+	word='rsync -a --delete /etc/'
+	if grep "$word" $BOOT_FILE_EXEC > /dev/null
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+#===|
+check_user() {
+
+  # Recebe o nome do usuário
+	system_user=$1
+  
+  
+  if id -u "$system_user" > /dev/null 2>&1; then
+    echo #return 0
+  else
+    return 1
+  fi
+
+	# Verificar se a pasta do usuario informado existe
+	if [ ! -d /home/$system_user ]; then		
+		return 1
+	fi
+
+
+USR_EX=$teste #$1
+
+_getUserEx() {
+grep "^$1\:x\:" /etc/passwd | \
+cut -d ':' -f 1 | \
+wc -c | \
+sed 's/[^0-9]//g'
+}
+
+if [ -z "${USR_EX}" ]; then
+echo "Diede mandou especificar um usuário"
+exit 1
+else
+if [ $( _getUserEx $USR_EX ) -gt 3 ]; then
+echo "O usuário - $USR_EX - já foi cadastrado."
+exit 0
+else
+echo "O usuário - $USR_EX - não esta cadastrado ainda".
+exit 2
+fi
+fi
+
+}
+
 #------------------------------------------------------------------------------ ####
 
 
