@@ -20,21 +20,6 @@ DESC=freeze
 # Configurar cabeçalho
 # DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
 
-# apt-cache search nautilus
-# Opção: #https://www.edivaldobrito.com.br/como-adicionar-opcao-abrir-terminal-aqui-menu-nautilus-ubuntu-14-04/
-# Abrir pasta como administrador e abrir terminal
-# sudo apt-get install nautilus-admin
-# Abrir como root
-# sudo nautilus
-
-# Alterar metadados arquivos de audio
-#easytag-nautilus - Nautilus extension for opening in EasyTAG
-
-# Atalhos
-#exo-open --launch FileManager => super + e
-#xfce4-screenshooter -f = Print (print screen)
-
-
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Estética
 
@@ -75,7 +60,7 @@ FILE_EXEC=/etc/init.d/freeze
 # Verifica se o script está sendo executado como root
 if [ "$(id -u)" != "0" ]; then
 	echo
-	echo "$BgRed Você deve executar este script como root! $Color_Off"
+	echo "Você deve executar este script como root!"
 	echo
 	exit 1
 fi
@@ -186,7 +171,7 @@ create_boot_file() {
 	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
 	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
 	echo "# Default-Start:     2 3 4 5" >>freeze_temp
-	echo "# Default-Stop:	   0 1 6" >>freeze_temp
+	echo "# Default-Stop:	   	 0 1 6" >>freeze_temp
 	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
 	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
 	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
@@ -269,6 +254,47 @@ check_status() {
 #------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
+check_user() {
+
+	system_user=$1
+
+if id -u "$system_user" > /dev/null 2>&1; then
+        echo "Utilizador existe"
+else
+        echo "O utilizador especificado não existe"
+fi
+
+	# Verificar se a pasta do usuario informado existe
+	if [ ! -d /home/$system_user ]; then		
+		return 1
+	fi
+
+USR_EX=$teste #$1
+
+_getUserEx() {
+grep "^$1\:x\:" /etc/passwd | \
+cut -d ':' -f 1 | \
+wc -c | \
+sed 's/[^0-9]//g'
+}
+
+if [ -z "${USR_EX}" ]; then
+echo "Diede mandou especificar um usuário"
+exit 1
+else
+if [ $( _getUserEx $USR_EX ) -gt 3 ]; then
+echo "O usuário - $USR_EX - já foi cadastrado."
+exit 0
+else
+echo "O usuário - $USR_EX - não esta cadastrado ainda".
+exit 2
+fi
+fi
+
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
 stop_freeze() {
 
 	# Verifica o status do sistema
@@ -298,17 +324,18 @@ stop_freeze() {
 #### ------------------------------------------------------------------------------#
 # Congelar o sistema para o usuario ativo/logado apenas
 start_freeze_this() {
-	# Há 3 formas de se pegar o nome do usuário logado (aparentemente essas 3 opções, pegam o usuário que está executando este script)
+
+	# Há 3 formas de se pegar o nome do usuário logado (aparente)
 	#		1) usuario=$(whoami)
 	#		2) usuario="$USER"
 	#		3) usuario=id -un
-	
-	# Aparentemente, este comando pega o nome do usuario logado/ativo atualmente, como esperado
-	who
-	who | awk '{print $1}'
-	
-	local system_user=$(whoami)
-	
+	#		4) usuario=$(who | awk '{print $1}')
+	#		5) who | awk '{print $1}' # Este só imprimi, não retorna para variável	
+
+	system_user=$(who | awk '{print $1}')
+
+	check_user $system_user
+
 	# Congela o usuário específico
 	start_freeze_user $system_user
 }
@@ -332,9 +359,10 @@ start_freeze_user() {
 		help
 		exit 1
 	fi
-
+echo "start_freeze_user"
+echo $1
 	# Recebe o nome do usuario informado
-	local system_user=$1
+	system_user=$1
 	
 	# Verifica o status do sistema
 	check_status
