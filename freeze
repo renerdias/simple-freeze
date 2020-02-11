@@ -40,6 +40,8 @@ Color_Off='\033[0m' # Redefinir
 # //FIXME PENDENCIAS
 # DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
 
+# Para Mega notes
+#https://github.com/miaolz123/vue-markdown
 
 #### ------------------------------------------------------------------------------#
 # VARIÁVEIS GLOBAIS - Inicialização
