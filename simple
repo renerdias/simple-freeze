@@ -52,6 +52,7 @@ Color_Off='\033[0m' # Redefinir
 #### ------------------------------------------------------------------------------#
 # 3) VARIÁVEIS DE EXECUÇÃO
 
+### ATENÇÃO É NECESSÁRIO E URGENTE ENCONTRAR OUTRO LOCAL PARA ARMAZENAR O ARQUIVO DE SENHA
 # Arquivo onde será salvo a senha de acesso ao script, caso seja informada
 PASSWORD_FILE=.freeze-password
 
@@ -91,16 +92,17 @@ security() {
 	# Verifica se foi criado/existe um arquivo de senha
 	if [ -e $PASSWORD_FILE ]; then
 		# Pega o conteudo do arquivo
-		freeze_password=$(<$PASSWORD_FILE)
+		#freeze_password=$(<$PASSWORD_FILE)
+		# Pega a 1ª linha do arquivo
+		freeze_password=$(head -1 $PASSWORD_FILE)
 		echo "$BgYellow ATENÇÃO!!! $Color_Off Foi definida anteriormente uma senha para utilização do 'freeze'."
 		echo
-		echo -n "Digite a senha: "
-		read -s password
+		read -p "Digite a senha: " password
 		# Pega a senha digitda, faz o hash, e recorta de 1-32
-		password=$(echo -n "$password" | md5sum | cut -c 1-32)
+		hash_password=$(echo -n "$password" | md5sum | cut -c 1-32)
 
 		# Confere a senha digitada, com a senha previamente definida
-		if [ $password != $freeze_password ]; then
+		if [ $hash_password != $freeze_password ]; then
 			echo
 			echo
 			echo "✘ Senha inválida!"
@@ -122,6 +124,11 @@ cleaner() {
     # Remove todos os link's conforme informado no cabeçalho (Default-Start e Default-Stop)
 		update-rc.d freeze remove
 		rm $BOOT_FILE_EXEC
+	fi
+	
+	# Se existir o arquivo de senha, remove
+	if [ -e $PASSWORD_FILE ]; then
+		rm $PASSWORD_FILE)
 	fi
 
 	return 0
@@ -169,6 +176,30 @@ check_user() {
 }
 
 #===|
+set_password() {
+
+	new_password="$1"
+	password_length=${#new_password}
+	
+	if [ $password_length = 0 ]; then
+		if [ -e $PASSWORD_FILE ]; then
+			rm $PASSWORD_FILE
+		fi
+		echo
+		echo
+		echo "✔ Senha removida com sucesso."
+		echo
+	else
+		hash_password=$(echo -n "$new_password" | md5sum | cut -c 1-32)
+		echo -n "$hash_password" >$PASSWORD_FILE
+		echo
+		echo
+		echo "✔ Senha alterada com sucesso."
+		echo
+	fi
+}
+
+#===|
 usage() {
     echo "usage: $NAME [options] [arguments]"
     echo
@@ -179,17 +210,18 @@ usage() {
     echo "               this          - Usuário atual"
     echo "               *             - Nome do usuário específico"
     echo "     stop"
-    echo "          arguments:"
+    echo "          ✘ arguments:"
     echo "               all           - Todos os usuários do sistema"
     echo "               this          - Usuário atual"
     echo "               *             - Nome do usuário específico"
     echo "     status"
-    echo "          arguments:"
+    echo "          ✘ arguments:"
     echo "               all           - Todos os usuários do sistema"
     echo "               this          - Usuário atual"
     echo "               *             - Nome do usuário específico"
     echo "     password	- Define um senha para o congelamento"
 }
+
 
 #------------------------------------------------------------------------------ ####
 
