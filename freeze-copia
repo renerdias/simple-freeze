@@ -1,0 +1,620 @@
+#!/bin/sh
+
+NAME=freeze
+DESC="Congela o sistema contra modificações, para um ou mais usuários"
+
+
+#### ------------------------------------------------------------------------------#
+# VARIÁVEIS GLOBAIS - Estética
+
+# Para texto
+TextRed='\033[0;31m'       # Red
+TextGreen='\033[0;32m'     # Green
+TextYellow='\033[0;33m'    # Yellow
+TextPurple='\033[0;35m'    # Purple
+TextCyan='\033[0;36m'      # Cyan
+TextBlue='\033[0;44m'      # Blue
+TextLightBlue='\033[0;94m' # LightBlue
+
+# Para fundo(background)
+BgRed='\033[0;41m'        # Red
+BgGreen='\033[0;42m'      # Green
+BgYellow='\033[0;43m'     # Yellow
+BgPurple='\033[0;45m'     # Purple
+BgCyan='\033[0;46m'       # Cyan
+BgBlue='\033[0;44m'       # Blue
+BgLightBlue='\033[0;104m' # LightBlue
+
+# Redefinir cores
+Color_Off='\033[0m' # Redefinir
+
+# EX.: echo "$TextCyan Adicionando repositórios... $Color_Off"
+#------------------------------------------------------------------------------ ####
+
+
+
+
+
+
+
+# //FIXME PENDENCIAS
+# DEPOIS DA 1ª FASE CONCLUÍDA: Fazer congelamento apenas das configurações, permitindo salvar nas pastas pessoais, tipo, musicas,documentos e etc
+
+# Para Mega notes
+#https://github.com/miaolz123/vue-markdown
+
+# Muito bacana
+#https://lauthieb.github.io/code-notes/
+#https://marktext.app/
+
+#### ------------------------------------------------------------------------------#
+# VARIÁVEIS GLOBAIS - Inicialização
+
+FOLDER_FREEZE=/etc/.freeze
+BOOT_FILE_EXEC=/etc/init.d/freeze
+# sUBSITUIR PELO ANTERIOR
+FILE_EXEC=/etc/init.d/freeze
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+# Verifica se o script está sendo executado como root
+if [ "$(id -u)" != "0" ]; then
+	echo
+	echo "Você deve executar este script como root!"
+	echo
+	exit 1
+fi
+#------------------------------------------------------------------------------ ####
+
+
+#### ------------------------------------------------------------------------------#
+credit() {
+	echo "$TextYellow"
+	echo "# =============================================================================="
+	echo "#                               SIMPLE FREEZE"
+	echo "# =============================================================================="
+	echo "$Color_Off"
+	# echo ""
+	echo "# =============================================================================="
+	echo "# Dafturn Ofris Erdana - Locking your System"
+	echo "# Version       : 1.9.05-en"
+	echo "# Created by    : Muhammad Faruq Nuruddinsyah"
+	echo "# E-Mail        : faruq@dafturn.org"
+	echo "# Created date  : October, 12th 2008"
+	echo "# =============================================================================="
+	# echo ""
+	echo "# =============================================================================="
+	echo "# Modified by:   Ali Riza KESKIN (SulinOS community)"
+	echo "# https://github.com/SulinOS/dafturn-ofris"
+	echo "# Modified date: 06.11.2019"
+	echo "# =============================================================================="
+	# echo ""
+	echo "$TextYellow"
+	echo "# =============================================================================="
+	echo "# Adaptado por:   Rener Dias <renerdias@msn.com>"
+	echo "# Data de modificação: 10.02.2020"
+	echo "# =============================================================================="
+	echo "$Color_Off"
+	echo ""
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+security() {
+	# Verifica se foi criado/existe um arquivo de senha
+	if [ -e .freeze-password ]; then
+		# Pega o conteudo do arquivo
+		freeze_password=$(<.freeze-password)
+		echo "$BgYellow ATENÇÃO!!! $Color_Off Foi definida anteriormente uma senha para utilização do 'freeze'."
+		echo
+		echo -n "Digite a senha: "
+		read -s password
+		# Pega a senha digitda, faz o hash, e recorta de 1-32
+		password=$(echo -n "$password" | md5sum | cut -c 1-32)
+
+		# Confere a senha digitada, com a senha previamente definida
+		if [ $password != $freeze_password ]; then
+			echo
+			echo
+			echo "✘ Senha inválida!"
+			echo
+			exit 1
+		fi
+		echo
+		echo
+	fi
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+cleaner() {
+	# Se existir a pasta .freeze, remove
+	[ -d /etc/.freeze ] && rm -r /etc/.freeze
+	
+	# Se existir o arquivo que inicia junto ao boot, remove
+	if [ -e /etc/init.d/freeze ]; then
+		update-rc.d freeze remove
+		rm /etc/init.d/freeze	
+	fi
+	
+	# Teoricamente quando esse comando for usado, todos os link's abaixo serão removidos
+	# Lembrando que update-rc.d, usa as informações do cabeçalho Default-Start e Default-Stop
+	# update-rc.d freeze remove
+	
+	# Se existirem os link's nos níveis de inicialização, remove-os
+	#[ -e /etc/rc0.d/S01freeze ] && rm /etc/rc0.d/S01freeze
+	#[ -e /etc/rc1.d/S01freeze ] && rm /etc/rc1.d/S01freeze
+	#[ -e /etc/rc2.d/S01freeze ] && rm /etc/rc2.d/S01freeze
+	#[ -e /etc/rc3.d/S01freeze ] && rm /etc/rc3.d/S01freeze
+	#[ -e /etc/rc4.d/S01freeze ] && rm /etc/rc4.d/S01freeze
+	#[ -e /etc/rc5.d/S01freeze ] && rm /etc/rc5.d/S01freeze
+	#[ -e /etc/rc6.d/S01freeze ] && rm /etc/rc6.d/S01freeze
+	
+	return 0
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+# Cria o arquivo que realizará a limpeza das alterações do(s) usuários, na inicialização do sistema
+# Recebe como parâmetro, o comando a ser executado na inicialização
+create_boot_file() {
+	# //FIXME Precisa de higienização na seção BEGIN INIT INFO
+	# Remove possíveis sujeiras
+	cleaner
+	
+	echo "#!/bin/sh" >freeze_temp	
+	echo "#" >>freeze_temp
+	echo "### BEGIN INIT INFO" >>freeze_temp
+	echo "# Provides:          freeze" >>freeze_temp
+	echo "# Required-Start:    remote_fs syslog time" >>freeze_temp
+	echo "# Required-Stop:     remote_fs syslog time" >>freeze_temp
+	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Default-Start:     2 3 4 5" >>freeze_temp
+	echo "# Default-Stop:	   0 1 6" >>freeze_temp
+	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
+	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
+	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
+	echo "#                    number of features to the basic UNIX cron, including better" >>freeze_temp
+	echo "#                    security and more powerful configuration options." >>freeze_temp
+	echo "### END INIT INFO" >>freeze_temp
+	echo "" >>freeze_temp
+	#echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >>freeze_temp
+	echo "NAME=freeze" >>freeze_temp
+	echo 'DESC="Executa a limpeza das alterações feitas pelo(s) usuário(s) durante o congelamento do sistema"' >>freeze_temp
+	echo "" >>freeze_temp
+	echo "$1" >>freeze_temp
+	echo "" >>freeze_temp
+	echo "exit 0" >>freeze_temp
+	#	echo "exit $?" >>freeze_temp
+
+	# //TODO Verificar a necessidade de criar um arquivo temporário, ao invés de criar o arquivo direto
+	cp freeze_temp /etc/init.d/freeze
+	rm freeze_temp
+	chmod +x /etc/init.d/freeze
+	#chmod 755 /etc/init.d/freeze
+	
+
+	# Adicionar link's nos vários niveis de inicialização do sistema
+	#OBS.: Testar a necessidade de colocar em varios níveis
+	# Teoricamente quando esse comando for usado, todos os link's abaixo serão removidos
+	# Lembrando que update-rc.d, usa as informações do cabeçalho Default-Start e Default-Stop
+	update-rc.d freeze defaults
+	# ln -s /etc/init.d/freeze /etc/rc0.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc1.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc2.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc3.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc4.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc5.d/S01freeze
+	# ln -s /etc/init.d/freeze /etc/rc6.d/S01freeze
+
+	# Cria o diretório de congelamento
+	mkdir /etc/.freeze/
+	
+	return 0
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+status_freeze() {
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} ESTÁ $Color_Off congelado!"
+	else
+		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} NãO ESTÁ $Color_Off congelado!"
+	fi
+    echo
+	exit 0	
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+check_status() {
+	# Verificar se a pasta .freeze existe
+	if [ ! -d /etc/.freeze ]; then
+		return 1
+	fi
+
+	# Verificar se o arquivo freeze existe
+	if [ ! -e /etc/init.d/freeze ]; then
+		return 1
+	fi
+
+	# Verifica se no arquivo freeze existe o comando rsync
+	local word='rsync -a --delete /etc/'
+	if grep "$word" /etc/init.d/freeze > /dev/null
+	then
+		return 0
+	else
+		return 1
+	fi
+	
+	# verificar se existe os links nos niveis de inicialização, pois sem eles o congelamente não tem efeito
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+check_user() {
+
+	system_user=$1
+
+if id -u "$system_user" > /dev/null 2>&1; then
+        echo "Utilizador existe"
+else
+        echo "O utilizador especificado não existe"
+fi
+
+	# Verificar se a pasta do usuario informado existe
+	if [ ! -d /home/$system_user ]; then		
+		return 1
+	fi
+
+USR_EX=$teste #$1
+
+_getUserEx() {
+grep "^$1\:x\:" /etc/passwd | \
+cut -d ':' -f 1 | \
+wc -c | \
+sed 's/[^0-9]//g'
+}
+
+if [ -z "${USR_EX}" ]; then
+echo "Diede mandou especificar um usuário"
+exit 1
+else
+if [ $( _getUserEx $USR_EX ) -gt 3 ]; then
+echo "O usuário - $USR_EX - já foi cadastrado."
+exit 0
+else
+echo "O usuário - $USR_EX - não esta cadastrado ainda".
+exit 2
+fi
+fi
+
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+stop_freeze() {
+
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -ne "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema $TextLightBlue NÃO $Color_Off está congelado."
+        echo
+		exit 0
+	fi	
+	
+	echo
+	echo "$BgYellow  STATUS:  $Color_Off Descongelando o sistema. Por favor aguarde..."
+	echo
+	
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$BgGreen  STATUS:  $Color_Off O sistema foi descongelado com sucesso!"
+    echo
+	else
+		echo "$BgRed  STATUS:  $Color_Off Não foi possível descongelar o sistema!"
+    echo
+		exit 1
+	fi
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+# Congelar o sistema para o usuario ativo/logado apenas
+start_freeze_this() {
+
+	# Há 3 formas de se pegar o nome do usuário logado (aparente)
+	#		1) usuario=$(whoami)
+	#		2) usuario="$USER"
+	#		3) usuario=id -un
+	#		4) usuario=$(who | awk '{print $1}')
+	#		5) who | awk '{print $1}' # Este só imprimi, não retorna para variável	
+
+	system_user=$(who | awk '{print $1}')
+
+	check_user $system_user
+
+	# Congela o usuário específico
+	start_freeze_user $system_user
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+# Congelar o sistema para um usuário específico
+start_freeze_user() {
+	# Verificar quantidade de parametros
+	if [ $# -lt 1 ]; then
+   		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
+
+	# Verifica se a variável é nula
+	if [ -z $1 ]; then
+		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
+echo "start_freeze_user"
+echo $1
+	# Recebe o nome do usuario informado
+	system_user=$1
+	
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
+    echo
+		exit 0
+	fi	
+	
+	# Verificar se a pasta do usuario informado existe
+	if [ ! -d /home/$system_user ]; then		
+		echo "$BgRed ERROR $Color_Off Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
+		echo
+		exit 1
+	fi
+			
+	create_boot_file "rsync -a --delete /etc/.freeze/$system_user/ /home/$system_user/"	
+	if [ "$?" -ne "0" ]; then
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+    echo
+		exit 1
+	fi
+		
+	# Realiza um cópia dos arquivos/configurações do usuário
+	#rsync -avhP /home/$system_user /etc/.freeze/
+	rsync -a /home/$system_user /etc/.freeze/
+	# Verifica se o rsync foi executado com sucesso
+	if [ $? -eq 0 ]; then
+		echo
+		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
+		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		echo
+		exit 0
+	fi
+	
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "Desfazendo modificações..."
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
+	else
+		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
+	fi
+	echo
+	exit 1
+}
+#------------------------------------------------------------------------------ ####
+
+
+
+
+
+
+
+
+
+# //FIXME Procurar um outro local de destino para a pasta .freeze, não faz muito sentido ela ficar em /etc
+# //FIXME Alterar pasta freeze para /home/.freeze, por questão de espaço, mas excluir ela na sincronização
+
+# The syntax is as follows:
+
+# exit N
+# The exit statement is used to exit from the shell script with a status of N.
+# Use the exit statement to indicate successful or unsuccessful shell script termination.
+# he value of N can be used by other commands or shell scripts to take their own action.
+# If N is omitted, the exit status is that of the last command executed.
+# Use the exit statement to terminate shell script upon an error.
+# If N is set to 0 means normal shell exit. Create a shell script called exitcmd.sh:
+
+#Best practices & Compression
+#A command to remember, that can be useful for you in all situations:
+
+#rsync -avhP source/ destination
+#Let's see new arguments :
+
+#-h : for “humanize”. Transforms bytes to Kilo/Mega/Gigabytes to make it more easy to read.
+#-P : for “Progress”. Displays the process of the transfer in real time (with -v, it will display the process file by file).
+
+
+#------------------------------------
+
+
+
+
+
+
+
+
+
+#### ------------------------------------------------------------------------------#
+# Congelar o sistema para todos os usuários
+start_freeze_all() {
+	
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
+		exit 0
+	fi	
+				
+	create_boot_file "rsync -a --delete /etc/.freeze/ /home/"	
+	if [ "$?" -ne "0" ]; then
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+		exit 1
+	fi
+		
+	# Realiza um cópia dos arquivos/configurações dos usuários
+	#rsync -avhP /home/ /etc/.freeze/
+	rsync -a /home/ /etc/.freeze/
+	# Verifica se o rsync foi executado com sucesso
+	if [ $? -eq 0 ]; then
+		echo
+		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
+		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		echo
+		exit 0
+	fi
+	
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "Desfazendo modificações..."
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
+	else
+		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
+	fi
+	echo
+	exit 1
+}
+#------------------------------------------------------------------------------ ####
+
+help() {
+	echo "Usage: $TextGreen $NAME $Color_Off command [options]"
+	echo ""
+	echo "Commands:"
+	echo "  $TextGreen start $Color_Off:"
+	echo "    all      - Todos os usuários do sistema"
+	echo "    this     - Usuário atual"
+	echo "    *        - Nome do usuário específico"
+	echo ""
+	echo "  $TextGreen stop $Color_Off       - Interronpe o congelamento"
+	echo "  $TextGreen status $Color_Off     - Verifica se o sistema está congelado"
+	echo "  $TextGreen password $Color_Off   - Define um senha para o congelamento"
+}
+
+# function usage
+# {
+#     echo "usage: search [arguments] [options]"
+#     echo "arguments:"
+#     echo "         for text"
+#     echo "         in directory"
+#     echo "options:"
+#     echo "         -c | --case-sensitive"
+#     echo "         -s | --show-filenames-only"
+# }
+
+#     case $1 in
+#         for | -f | --for )
+#             shift
+#             text=$1
+#             ;;
+#         in | --in | -i )
+#             shift
+#             directory=$1
+#             ;;
+#         -h | --help )
+#             usage
+#             exit
+#             ;;
+#         -c | --case-sensitive )
+#             case=
+#             ;;
+#         -s | --show-filenames-only )
+#             verbose=l
+#             ;;
+#         * )
+#             usage
+#             exit 1
+#     esac
+
+
+
+
+#### ------------------------------------------------------------------------------#
+set_password() {
+	#----- Password protection by Kelompok 4 OSSDev -----
+	#----- Set or clear password -----
+	echo
+	echo "===== Configurando senha ====="
+	echo
+
+	echo -n "$1" >.freeze_temp_pwd
+	password_count=$(wc -m .freeze_temp_pwd)
+	rm .freeze_temp_pwd
+	password_count=${password_count:0:1}
+
+	if [ $password_count = 0 ]; then
+		if [ -e .freeze-password ]; then
+			rm .freeze-password
+		fi
+		echo
+		echo
+		echo "Senha removida com sucesso."
+		echo
+	else
+		hash_password=$(echo -n "$new_password" | md5sum | cut -c 1-32)
+		echo -n "$hash_password" >.freeze-password
+
+		echo
+		echo
+		echo "Senha alterada com sucesso."
+		echo
+	fi
+}
+#------------------------------------------------------------------------------ ####
+
+#### ------------------------------------------------------------------------------#
+# Inicia as funções básicas
+init() {
+	credit
+	security
+}
+#------------------------------------------------------------------------------ ####
+
+# Inicia as funções básicas
+init
+
+case "$1" in
+start)
+	case "$2" in
+	all) start_freeze_all ;;
+	this) start_freeze_this;;
+	*) start_freeze_user $2 ;;
+	esac
+	;;
+stop)
+	stop_freeze
+	#case "$2" in
+		#all) stop_freeze_all ;;
+		#this) stop_freeze_this ;;
+		#*) stop_freeze_user "$2" ;;
+	#esac
+	;;
+status)
+	status_freeze
+	;;
+password)
+	set_password "$2"
+	;;
+*) 
+help
+
+	exit 3
+	;;
+esac
