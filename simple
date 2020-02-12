@@ -168,6 +168,29 @@ check_user() {
 
 }
 
+#===|
+usage() {
+    echo "usage: $NAME [options] [arguments]"
+    echo
+    echo "options:"
+    echo "     start"
+    echo "          arguments:"
+    echo "               all           - Todos os usuários do sistema"
+    echo "               this          - Usuário atual"
+    echo "               *             - Nome do usuário específico"
+    echo "     stop"
+    echo "          arguments:"
+    echo "               all           - Todos os usuários do sistema"
+    echo "               this          - Usuário atual"
+    echo "               *             - Nome do usuário específico"
+    echo "     status"
+    echo "          arguments:"
+    echo "               all           - Todos os usuários do sistema"
+    echo "               this          - Usuário atual"
+    echo "               *             - Nome do usuário específico"
+    echo "     password	- Define um senha para o congelamento"
+}
+
 #------------------------------------------------------------------------------ ####
 
 
