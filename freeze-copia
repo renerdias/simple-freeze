@@ -94,53 +94,7 @@ create_boot_file() {
 #------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
-status_freeze() {
-	check_status
-	if [ "$?" -eq "0" ]; then
-		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} ESTÁ $Color_Off congelado!"
-		
-echo "$BgGreen Lista de usuários congelados: $Color_Off"
-echo $TextGreen
-for file in /etc/.freeze/*; do
-    if [ -d "$file" ]; then
-	echo $(basename $file)
-    fi
-done
-echo $Color_Off
 
-	else
-		echo "$BgYellow  STATUS:  $Color_Off O sistema ${TextYellow} NãO ESTÁ $Color_Off congelado!"
-	fi
-    echo
-	exit 0	
-}
-#------------------------------------------------------------------------------ ####
-
-#### ------------------------------------------------------------------------------#
-stop_freeze() {
-
-	# Verifica o status do sistema
-	check_status
-	if [ "$?" -ne "0" ]; then
-		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema $TextLightBlue NÃO $Color_Off está congelado."
-        echo
-		exit 0
-	fi	
-	
-	echo
-	echo "$BgYellow  STATUS:  $Color_Off Descongelando o sistema. Por favor aguarde..."
-	echo
-	
-	cleaner
-	if [ "$?" -eq "0" ]; then
-		echo "$BgGreen  STATUS:  $Color_Off O sistema foi descongelado com sucesso!"
-    echo
-	else
-		echo "$BgRed  STATUS:  $Color_Off Não foi possível descongelar o sistema!"
-    echo
-		exit 1
-	fi
-}
 #------------------------------------------------------------------------------ ####
 
 #### ------------------------------------------------------------------------------#
