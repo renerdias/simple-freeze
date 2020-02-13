@@ -206,9 +206,9 @@ usage() {
     echo "options:"
     echo "     start"
     echo "          arguments:"
-    echo "               all           - Todos os usuários do sistema"
-    echo "               this          - Usuário atual"
-    echo "               *             - Nome do usuário específico"
+    echo "               all           - Congela todos os usuários do sistema"
+    echo "               this          - Congela o usuário atual"
+    echo "               *             - Nome do usuário específico a ser congelado"
     echo "     stop"
     echo "          ✘ arguments:"
     echo "               all           - Todos os usuários do sistema"
@@ -219,7 +219,9 @@ usage() {
     echo "               all           - Todos os usuários do sistema"
     echo "               this          - Usuário atual"
     echo "               *             - Nome do usuário específico"
-    echo "     password	- Define um senha para o congelamento"
+    echo "     password                - Define um senha para o congelamento"
+    echo "     help                    - Exibe instruções de uso"
+    
 }
 
 
@@ -230,6 +232,52 @@ usage() {
 
 #### ------------------------------------------------------------------------------#
 # 6) FUNÇOES PRIMÁRIAS
+
+#===|
+status_freeze() {
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "${TextYellow} ✔ O sistema ${Color_Off}${BgYellow} ESTÁ ${Color_Off}${TextYellow} congelado!${Color_Off}"
+		echo
+		echo "$BgGreen Lista de usuários congelados: $Color_Off"
+		echo $TextGreen
+		for file in ${DIR_FREEZE}/*; do
+    	if [ -d "$file" ]; then
+				echo "   ⬤ $(basename $file)"
+    	fi
+		done
+		echo $Color_Off
+	else
+		echo "${TextYellow} ✘ O sistema ${Color_Off}${BgYellow} NÃO ESTÁ ${Color_Off}${TextYellow} congelado!${Color_Off}"
+	fi
+    echo
+	exit 0	
+}
+
+#===|
+stop_freeze() {
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -ne "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema $TextLightBlue NÃO $Color_Off está congelado."
+		exit 0
+	fi	
+	
+	echo
+	echo "$TextLightBlue Descongelando o sistema. Por favor aguarde...$Color_Off"
+	echo
+	
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$TextGreen ✔ O sistema foi descongelado com sucesso! $Color_Off"
+	else
+		echo "$TextRed ✘ Não foi possível descongelar o sistema! $Color_Off"
+		echo
+		exit 1
+	fi
+	echo
+	exit 0
+}
 #------------------------------------------------------------------------------ ####
 
 
