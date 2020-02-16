@@ -278,13 +278,214 @@ stop_freeze() {
 	echo
 	exit 0
 }
+
+#===|
+# Congelar o sistema para o usuario ativo/logado apenas
+start_freeze_this() {
+	# Há 3 formas de se pegar o nome do usuário que está executando o arquivo
+	#		1) usuario=$(whoami)
+	#		2) usuario="$USER"
+	#		3) usuario=id -un
+	
+	# Há 2 formas de se pegar o nome do usuário que está logado/ativo
+	#		1) usuario=$(who | awk '{print $1}')
+	#		5) who | awk '{print $1}' # Este só imprimi, não retorna para variável	
+
+	system_user=$(who | awk '{print $1}')
+
+	check_user $system_user
+
+	# Congela o usuário específico
+	start_freeze_user $system_user
+}
+
+#===|
+# Congelar o sistema para um usuário específico
+start_freeze_user() {
+	# Verificar quantidade de parametros
+	if [ $# -lt 1 ]; then
+   		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
+
+	# Verifica se a variável é nula
+	if [ -z $1 ]; then
+		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
+		echo
+		help
+		exit 1
+	fi
+
+	# Recebe o nome do usuario informado
+	system_user=$1
+	
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
+    echo
+		exit 0
+	fi	
+	
+	# Verificar se a pasta do usuario informado existe
+	if [ ! -d /home/$system_user ]; then		
+		echo "$BgRed ERROR $Color_Off Desculpe, o usuário informado é inválido. Por favor, tente novamente..."
+		echo
+		exit 1
+	fi
+			
+	create_boot_file "rsync -a --delete $DIR_FREEZE/$system_user/ /home/$system_user/"	
+	if [ "$?" -ne "0" ]; then
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+    echo
+		exit 1
+	fi
+		
+	# Realiza um cópia dos arquivos/configurações do usuário
+	rsync -a /home/$system_user $DIR_FREEZE/
+	# Verifica se o rsync foi executado com sucesso
+	if [ $? -eq 0 ]; then
+		echo
+		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
+		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		echo
+		exit 0
+	fi
+	
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "Desfazendo modificações..."
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
+	else
+		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
+	fi
+	echo
+	exit 1
+}
+
+#===|
+# Congelar o sistema para todos os usuários
+start_freeze_all() {
+	
+	# Verifica o status do sistema
+	check_status
+	if [ "$?" -eq "0" ]; then
+		echo "$BgLightBlue INFO $Color_Off Não é possivel realizar esta operação, o sistema já está congelado."
+		exit 0
+	fi	
+				
+	create_boot_file "rsync -a --delete $DIR_FREEZE/ /home/"	
+	if [ "$?" -ne "0" ]; then
+		echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+		exit 1
+	fi
+		
+	# Realiza um cópia dos arquivos/configurações dos usuários
+	rsync -a /home/ $DIR_FREEZE/
+	# Verifica se o rsync foi executado com sucesso
+	if [ $? -eq 0 ]; then
+		echo
+		echo "$TextGreen ✔ Sistema congelado com sucesso! $Color_Off"
+		echo "$TextYellow ➤ Reinicie o computador para concluir... $Color_Off"			
+		echo
+		exit 0
+	fi
+	
+	echo "$BgRed ERROR $Color_Off Desculpe, ocorreu um erro inesperado. Por favor, tente novamente..."
+	echo "Desfazendo modificações..."
+	cleaner
+	if [ "$?" -eq "0" ]; then
+		echo "$BgYellow  STATUS:  $Color_Off Modificações desfeitas com sucesso!"
+	else
+		echo "$BgRed  STATUS:  $Color_Off Não foi possível desfazer as modificações!"
+	fi
+	echo
+	exit 1
+}
+
+#===|
+# Cria o arquivo que realizará a limpeza das alterações do(s) usuários, na inicialização do sistema
+# Recebe como parâmetro, o comando a ser executado na inicialização
+create_boot_file() {
+	
+	# Remove possíveis sujeiras
+	cleaner
+	
+	echo "#!/bin/sh" >freeze_temp	
+	echo "#" >>freeze_temp
+	echo "### BEGIN INIT INFO" >>freeze_temp
+	echo "# Provides:          freeze" >>freeze_temp
+	echo "# Required-Start:    remote_fs syslog time" >>freeze_temp
+	echo "# Required-Stop:     remote_fs syslog time" >>freeze_temp
+	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	echo "# Default-Start:     2 3 4 5" >>freeze_temp
+	echo "# Default-Stop:	   0 1 6" >>freeze_temp
+	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
+	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
+	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
+	echo "#                    number of features to the basic UNIX cron, including better" >>freeze_temp
+	echo "#                    security and more powerful configuration options." >>freeze_temp
+	echo "### END INIT INFO" >>freeze_temp
+	echo "" >>freeze_temp
+	#echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >>freeze_temp
+	echo "NAME=freeze" >>freeze_temp
+	echo 'DESC="Executa a limpeza das alterações feitas pelo(s) usuário(s) durante o congelamento do sistema"' >>freeze_temp
+	echo "" >>freeze_temp
+	echo "$1" >>freeze_temp
+	echo "" >>freeze_temp
+	echo "exit 0" >>freeze_temp
+	#	echo "exit $?" >>freeze_temp
+
+	# //TODO Verificar a necessidade de criar um arquivo temporário, ao invés de criar o arquivo direto
+	cp freeze_temp $BOOT_FILE_EXEC
+	rm freeze_temp
+	chmod +x $BOOT_FILE_EXEC
+	
+	# Adicionar link's nos vários niveis de inicialização do sistema
+	# Lembrando que update-rc.d, usa as informações do cabeçalho Default-Start e Default-Stop
+	update-rc.d $NAME defaults
+
+	# Cria o diretório de congelamento
+	mkdir $DIR_FREEZE/
+	
+	return 0
+}
 #------------------------------------------------------------------------------ ####
 
 
 
 
 #### ------------------------------------------------------------------------------#
-# 7) INICIALIZAÇÃO
+# 6) INICIALIZAÇÃO
+
+# Inicializa fazendo checagem de segurança
+security
+
+case "$1" in
+start)
+	case "$2" in
+	all) start_freeze_all ;;
+	this) start_freeze_this;;
+	*) start_freeze_user $2 ;;
+	esac
+	;;
+stop)
+	stop_freeze
+	;;
+status)
+	status_freeze
+	;;
+password)
+	set_password "$2"
+	;;
+*) usage
+	exit 3
+	;;
+esac
 #------------------------------------------------------------------------------ ####
 
 
