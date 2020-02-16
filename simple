@@ -56,6 +56,9 @@ Color_Off='\033[0m' # Redefinir
 # Arquivo onde será salvo a senha de acesso ao script, caso seja informada
 PASSWORD_FILE=.freeze-password
 
+### ATENÇÃO É NECESSÁRIO E URGENTE:
+# Trocar diretório para /home/.freeze e
+# excluir ele no rsync com --exclude '$DIR_FREEZE'
 # Diretório onde será salvo o backup dos arquivos do(s) usuário(s)
 DIR_FREEZE=/etc/.freeze
 
@@ -117,18 +120,18 @@ security() {
 #===|
 cleaner() {
 	# Se existir a pasta .freeze, remove
-	[ -d $DIR_FREEZE ] && rm -r $DIR_FREEZE
+	[ -d $DIR_FREEZE ] && rm -rf $DIR_FREEZE
 	
 	# Se existir o arquivo que inicia junto ao boot, remove
 	if [ -e $BOOT_FILE_EXEC ]; then
     # Remove todos os link's conforme informado no cabeçalho (Default-Start e Default-Stop)
 		update-rc.d freeze remove
-		rm $BOOT_FILE_EXEC
+		rm -rf $BOOT_FILE_EXEC
 	fi
 	
 	# Se existir o arquivo de senha, remove
 	if [ -e $PASSWORD_FILE ]; then
-		rm $PASSWORD_FILE)
+		rm -rf $PASSWORD_FILE
 	fi
 
 	return 0
@@ -183,7 +186,7 @@ set_password() {
 	
 	if [ $password_length = 0 ]; then
 		if [ -e $PASSWORD_FILE ]; then
-			rm $PASSWORD_FILE
+			rm -rf $PASSWORD_FILE
 		fi
 		echo
 		echo
@@ -199,8 +202,23 @@ set_password() {
 	fi
 }
 
+
+#===|
+user_list_freeze() {
+echo
+		echo "$BgGreen Lista de usuários congelados: $Color_Off"
+		echo $TextGreen
+		for file in ${DIR_FREEZE}/*; do
+    	if [ -d "$file" ]; then
+				echo "   ⬤ $(basename $file)"
+    	fi
+		done
+		echo $Color_Off
+}
+
 #===|
 usage() {
+    echo
     echo "usage: $NAME [options] [arguments]"
     echo
     echo "options:"
@@ -219,9 +237,10 @@ usage() {
     echo "               all           - Todos os usuários do sistema"
     echo "               this          - Usuário atual"
     echo "               *             - Nome do usuário específico"
+    echo "     list                    - Lista de usuários congelados"
     echo "     password                - Define um senha para o congelamento"
-    echo "     help                    - Exibe instruções de uso"
-    
+    echo "     usage                   - Exibe instruções de uso"
+    echo
 }
 
 
@@ -237,16 +256,8 @@ usage() {
 status_freeze() {
 	check_status
 	if [ "$?" -eq "0" ]; then
-		echo "${TextYellow} ✔ O sistema ${Color_Off}${BgYellow} ESTÁ ${Color_Off}${TextYellow} congelado!${Color_Off}"
-		echo
-		echo "$BgGreen Lista de usuários congelados: $Color_Off"
-		echo $TextGreen
-		for file in ${DIR_FREEZE}/*; do
-    	if [ -d "$file" ]; then
-				echo "   ⬤ $(basename $file)"
-    	fi
-		done
-		echo $Color_Off
+		echo "${TextYellow} ✔ O sistema ${Color_Off}${BgYellow} ESTÁ ${Color_Off}${TextYellow} congelado!${Color_Off}"		
+		user_list_freeze		
 	else
 		echo "${TextYellow} ✘ O sistema ${Color_Off}${BgYellow} NÃO ESTÁ ${Color_Off}${TextYellow} congelado!${Color_Off}"
 	fi
@@ -302,11 +313,12 @@ start_freeze_this() {
 #===|
 # Congelar o sistema para um usuário específico
 start_freeze_user() {
+echo
 	# Verificar quantidade de parametros
 	if [ $# -lt 1 ]; then
    		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
 		echo
-		help
+		usage
 		exit 1
 	fi
 
@@ -314,7 +326,7 @@ start_freeze_user() {
 	if [ -z $1 ]; then
 		echo "$BgRed ERROR $Color_Off Este comando precisa do nome do usuário como parâmetro."
 		echo
-		help
+		usage
 		exit 1
 	fi
 
@@ -418,31 +430,26 @@ create_boot_file() {
 	echo "#" >>freeze_temp
 	echo "### BEGIN INIT INFO" >>freeze_temp
 	echo "# Provides:          freeze" >>freeze_temp
-	echo "# Required-Start:    remote_fs syslog time" >>freeze_temp
-	echo "# Required-Stop:     remote_fs syslog time" >>freeze_temp
-	echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
-	echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	#echo "# Required-Start:    remote_fs syslog time" >>freeze_temp
+	#echo "# Required-Stop:     remote_fs syslog time" >>freeze_temp
+	#echo "# Should-Start:      network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
+	#echo "# Should-Stop:       network named slapd autofs ypbind nscd nslcd winbind" >>freeze_temp
 	echo "# Default-Start:     2 3 4 5" >>freeze_temp
 	echo "# Default-Stop:	   0 1 6" >>freeze_temp
-	echo "# Short-Description: Regular background program processing daemon" >>freeze_temp
-	echo "# Description:       cron is a standard UNIX program that runs user-specified " >>freeze_temp
-	echo "#                    programs at periodic scheduled times. vixie cron adds a " >>freeze_temp
-	echo "#                    number of features to the basic UNIX cron, including better" >>freeze_temp
-	echo "#                    security and more powerful configuration options." >>freeze_temp
+	echo "# Short-Description: Remove modificações realizadas pelo usuário após o congelamento" >>freeze_temp
+	echo "# Description:       Executa a limpeza das alterações feitas pelo(s) usuário(s) " >>freeze_temp
+	echo "#                    durante o congelamento do sistema " >>freeze_temp
 	echo "### END INIT INFO" >>freeze_temp
 	echo "" >>freeze_temp
-	#echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin" >>freeze_temp
 	echo "NAME=freeze" >>freeze_temp
-	echo 'DESC="Executa a limpeza das alterações feitas pelo(s) usuário(s) durante o congelamento do sistema"' >>freeze_temp
 	echo "" >>freeze_temp
 	echo "$1" >>freeze_temp
 	echo "" >>freeze_temp
 	echo "exit 0" >>freeze_temp
-	#	echo "exit $?" >>freeze_temp
 
 	# //TODO Verificar a necessidade de criar um arquivo temporário, ao invés de criar o arquivo direto
 	cp freeze_temp $BOOT_FILE_EXEC
-	rm freeze_temp
+	rm -rf freeze_temp
 	chmod +x $BOOT_FILE_EXEC
 	
 	# Adicionar link's nos vários niveis de inicialização do sistema
@@ -478,6 +485,9 @@ stop)
 	;;
 status)
 	status_freeze
+	;;
+list)
+	user_list_freeze
 	;;
 password)
 	set_password "$2"
